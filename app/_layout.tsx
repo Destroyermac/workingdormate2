@@ -109,7 +109,7 @@ export default function RootLayout() {
   if (StripeProvider && (Platform.OS === 'ios' || Platform.OS === 'android')) {
     // Get Stripe publishable key from environment or use a placeholder
     // In production, this should come from your environment variables
-    const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder';
+    const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51SVMycB6vmqskvV1XVGLTEoKVvry0tjMOQlBwMoHGerQXCQIk0Phuw7OvOApR4LjQyjYhoXZ96xEp8r5CiSmzreF00IJSPrAsQ';
     
     console.log('✅ Initializing with Stripe support');
     return (
