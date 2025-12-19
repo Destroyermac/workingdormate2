@@ -1,5 +1,5 @@
 
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { supabase } from "@/app/integrations/supabase/client";
@@ -67,7 +67,15 @@ export default function Login() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>🏠 dormate</Text>
+        {process.env.EXPO_PUBLIC_DORMATE_LOGO_URL ? (
+          <Image
+            source={{ uri: process.env.EXPO_PUBLIC_DORMATE_LOGO_URL }}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        ) : (
+          <Text style={styles.title}>Dormate</Text>
+        )}
         <Text style={styles.subtitle}>a college job marketplace</Text>
         <Text style={styles.signInText}>Sign in to continue</Text>
 
@@ -149,6 +157,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 5,
+  },
+  logo: {
+    width: 220,
+    height: 100,
+    alignSelf: "center",
+    marginBottom: 8,
   },
   title: {
     fontSize: 32,
