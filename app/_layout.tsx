@@ -42,8 +42,12 @@ function RootLayoutInner() {
       const checkBanAndNotifications = async () => {
         try {
           const { data, error } = await supabase.functions.invoke('ban-check');
-          if (error || data?.error) {
-            console.warn('User is banned or ban-check failed', error || data?.error);
+          if (error) {
+            console.warn('ban-check failed (continuing):', error);
+            return;
+          }
+          if (data?.error) {
+            console.warn('User is banned:', data.error);
             await supabase.auth.signOut();
             Alert.alert(
               'Account Restricted',

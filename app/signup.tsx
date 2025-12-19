@@ -243,7 +243,7 @@ export default function Signup() {
                 <Text style={styles.label}>Verification Code</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="000000"
+                  placeholder="Enter your 6-digit code"
                   value={otp}
                   onChangeText={setOtp}
                   keyboardType="number-pad"
@@ -273,12 +273,6 @@ export default function Signup() {
                   Change email address
                 </Text>
               </TouchableOpacity>
-
-              <View style={styles.infoBox}>
-                <Text style={styles.infoText}>
-                  💡 For testing, you can use the code: 000000
-                </Text>
-              </View>
             </>
           )}
 
