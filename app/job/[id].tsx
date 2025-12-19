@@ -8,7 +8,7 @@ import { supabaseApi } from "@/services/supabaseApi";
 import { stripeService } from '@/services/stripeService';
 import Toast from 'react-native-toast-message';
 import React from "react";
-import ReportForm from "@/components/ReportForm";
+import { ReportModal } from "@/components/ReportModal";
 import { BlockUserModal } from "@/components/BlockUserModal";
 
 interface Job {
@@ -884,31 +884,13 @@ export default function JobDetail() {
         )}
       </ScrollView>
 
-      {/* Report Form Modal */}
-      <Modal
+      {/* Report Modal */}
+      <ReportModal
         visible={showReportModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowReportModal(false)}
-      >
-        <View style={styles.reportOverlay}>
-          <View style={styles.reportContainer}>
-            <View style={styles.reportHeader}>
-              <Text style={styles.reportTitle}>Report Job</Text>
-              <TouchableOpacity onPress={() => setShowReportModal(false)} style={styles.reportClose}>
-                <Text style={styles.reportCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            {job ? (
-              <ReportForm targetId={job.id} onSubmitted={() => setShowReportModal(false)} />
-            ) : (
-              <View style={styles.centerContent}>
-                <ActivityIndicator size="large" color="#2A5EEA" />
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowReportModal(false)}
+        reportedJobId={job?.id}
+        reportType="job"
+      />
 
       {/* Block User Modal - Apple Compliance */}
       {job?.users && (
