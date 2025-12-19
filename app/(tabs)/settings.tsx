@@ -189,22 +189,18 @@ export default function Settings() {
           onPress: async () => {
             try {
               console.log('🗑️ Deleting account...');
-              
-              // Delete user data
-              const { error: deleteError } = await supabase
-                .from('users')
-                .delete()
-                .eq('id', user?.id);
+              const { error: fnError } = await supabase.functions.invoke('delete-user-data', {
+                body: { userId: user?.id },
+              });
 
-              if (deleteError) {
-                console.error('❌ Error deleting user data:', deleteError);
+              if (fnError) {
+                console.error('❌ Error deleting user data:', fnError);
                 Alert.alert('Error', 'Failed to delete account. Please contact support.');
                 return;
               }
 
-              // Sign out
               await supabase.auth.signOut();
-              
+
               Alert.alert('Account Deleted', 'Your account has been permanently deleted.', [
                 {
                   text: 'OK',
