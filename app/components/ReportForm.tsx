@@ -9,9 +9,10 @@ type ReportType = "Spam" | "Inappropriate Content" | "Other";
 
 interface ReportFormProps {
   targetId: string; // job, post, or user being reported
+  onSubmitted?: () => void;
 }
 
-export default function ReportForm({ targetId }: ReportFormProps) {
+export default function ReportForm({ targetId, onSubmitted }: ReportFormProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [reportType, setReportType] = useState<ReportType | null>(null);
@@ -55,7 +56,11 @@ export default function ReportForm({ targetId }: ReportFormProps) {
       if (error) throw error;
 
       Toast.show({ type: "success", text1: "Report submitted" });
-      router.back();
+      if (onSubmitted) {
+        onSubmitted();
+      } else {
+        router.back();
+      }
     } catch (err: any) {
       console.error("❌ Error submitting report:", err);
       Toast.show({

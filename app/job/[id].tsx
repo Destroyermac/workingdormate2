@@ -1,5 +1,5 @@
 
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useEffect, useState } from "react";
@@ -8,7 +8,7 @@ import { supabaseApi } from "@/services/supabaseApi";
 import { stripeService } from '@/services/stripeService';
 import Toast from 'react-native-toast-message';
 import React from "react";
-import { ReportModal } from "@/components/ReportModal";
+import ReportForm from "@/components/ReportForm";
 import { BlockUserModal } from "@/components/BlockUserModal";
 
 interface Job {
@@ -884,13 +884,31 @@ export default function JobDetail() {
         )}
       </ScrollView>
 
-      {/* Report Modal - Apple Compliance */}
-      <ReportModal
+      {/* Report Form Modal */}
+      <Modal
         visible={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        reportedJobId={job?.id}
-        reportType="job"
-      />
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowReportModal(false)}
+      >
+        <View style={styles.reportOverlay}>
+          <View style={styles.reportContainer}>
+            <View style={styles.reportHeader}>
+              <Text style={styles.reportTitle}>Report Job</Text>
+              <TouchableOpacity onPress={() => setShowReportModal(false)} style={styles.reportClose}>
+                <Text style={styles.reportCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {job ? (
+              <ReportForm targetId={job.id} onSubmitted={() => setShowReportModal(false)} />
+            ) : (
+              <View style={styles.centerContent}>
+                <ActivityIndicator size="large" color="#2A5EEA" />
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Block User Modal - Apple Compliance */}
       {job?.users && (
@@ -1271,5 +1289,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#475569",
+  },
+  reportOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  reportContainer: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "85%",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  reportHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  reportTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  reportClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  reportCloseText: {
+    fontSize: 18,
+    color: "#475569",
+    fontWeight: "600",
   },
 });
