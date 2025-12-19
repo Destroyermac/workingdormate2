@@ -16,8 +16,10 @@ interface Receipt {
   amount_total?: number | null;
   stripe_fee_cents?: number | null;
   stripe_fee?: number | null;
+  stripe_fee_percent?: number | null;
   platform_fee_cents?: number | null;
   platform_fee?: number | null;
+  platform_fee_percent?: number | null;
   net_amount_cents?: number | null;
   total_paid_cents?: number | null;
   currency?: string | null;

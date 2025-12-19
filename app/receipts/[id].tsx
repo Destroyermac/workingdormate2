@@ -13,6 +13,8 @@ interface Payment {
   job_price_cents: number;
   stripe_fee_cents: number;
   platform_fee_cents: number;
+  stripe_fee_percent?: number | null;
+  platform_fee_percent?: number | null;
   net_amount_cents: number;
   total_paid_cents: number;
   currency: string;

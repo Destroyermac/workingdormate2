@@ -189,7 +189,10 @@ Deno.serve(async (req) => {
     // Calculate amounts
     const jobPriceCents = Math.round(Number(job.price_amount) * 100);
     const platformFeeCents = Math.round(jobPriceCents * PLATFORM_FEE_PERCENTAGE);
-    const netAmountCents = jobPriceCents - platformFeeCents;
+    const stripeFeeCents = Math.round(jobPriceCents * 0.029 + 30); // 2.9% + $0.30
+    const stripeFeePercent = 2.9;
+    const platformFeePercent = PLATFORM_FEE_PERCENTAGE * 100;
+    const netAmountCents = jobPriceCents - platformFeeCents - stripeFeeCents;
 
     console.log('💰 Amounts:', {
       jobPriceCents,
@@ -249,7 +252,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Invalid payment response from Stripe' }, 500);
     }
 
-    // Create payment record in database
+    // Create payment record in database (payments_v2)
     try {
       console.log('💾 Creating payment record...');
 
@@ -259,13 +262,15 @@ Deno.serve(async (req) => {
         payer_user_id: user.id,
         payee_user_id: payeeProfile.id,
         amount_total: jobPriceCents,
-        stripe_fee: 0,
+        stripe_fee: stripeFeeCents,
         platform_fee: platformFeeCents,
         timestamp: new Date().toISOString(),
         status: 'processing',
         job_price_cents: jobPriceCents,
-        stripe_fee_cents: 0, // Will be updated by webhook
+        stripe_fee_cents: stripeFeeCents,
         platform_fee_cents: platformFeeCents,
+        stripe_fee_percent: stripeFeePercent,
+        platform_fee_percent: platformFeePercent,
         net_amount_cents: netAmountCents,
         total_paid_cents: jobPriceCents,
         currency: (job.price_currency || 'USD').toUpperCase(),
@@ -273,7 +278,7 @@ Deno.serve(async (req) => {
       };
       
       const { data: payment, error: paymentError } = await supabase
-        .from('payments')
+        .from('payments_v2')
         .insert(paymentRecord)
         .select()
         .single();
@@ -302,9 +307,11 @@ Deno.serve(async (req) => {
         payerUserId: user.id,
         payeeUserId: payeeProfile.id,
         currency: (job.price_currency || 'USD').toUpperCase(),
-        stripeFee: 0,
+        stripeFee: stripeFeeCents,
         platformFee: platformFeeCents,
         amountTotal: jobPriceCents,
+        stripeFeePercent,
+        platformFeePercent,
       },
     }, 200);
 
