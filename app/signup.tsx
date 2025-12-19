@@ -183,15 +183,11 @@ export default function Signup() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
-          {process.env.EXPO_PUBLIC_DORMATE_LOGO_URL ? (
-            <Image
-              source={{ uri: process.env.EXPO_PUBLIC_DORMATE_LOGO_URL }}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          ) : (
-            <Text style={styles.title}>Dormate</Text>
-          )}
+          <Image
+            source={require('@/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.subtitle}>a college job marketplace</Text>
           
           {step === 'email' && (
@@ -490,8 +486,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   logo: {
-    width: 220,
-    height: 100,
+    width: 240,
+    height: 110,
     alignSelf: "center",
     marginBottom: 8,
   },

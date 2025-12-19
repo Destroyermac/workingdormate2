@@ -67,15 +67,11 @@ export default function Login() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {process.env.EXPO_PUBLIC_DORMATE_LOGO_URL ? (
-          <Image
-            source={{ uri: process.env.EXPO_PUBLIC_DORMATE_LOGO_URL }}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        ) : (
-          <Text style={styles.title}>Dormate</Text>
-        )}
+        <Image
+          source={require('@/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.subtitle}>a college job marketplace</Text>
         <Text style={styles.signInText}>Sign in to continue</Text>
 
@@ -159,8 +155,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   logo: {
-    width: 220,
-    height: 100,
+    width: 240,
+    height: 110,
     alignSelf: "center",
     marginBottom: 8,
   },
