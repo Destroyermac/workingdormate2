@@ -89,6 +89,7 @@ function RootLayoutInner() {
         <Stack.Screen name="job/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="payments" options={{ headerShown: false }} />
         <Stack.Screen name="receipts" options={{ headerShown: false }} />
+        <Stack.Screen name="receipts/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="payment-receipt/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="legal/privacy-policy" options={{ headerShown: false }} />
         <Stack.Screen name="legal/terms-of-service" options={{ headerShown: false }} />

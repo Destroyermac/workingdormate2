@@ -108,7 +108,7 @@ export default function Receipts() {
       <TouchableOpacity
         key={receipt.id}
         style={styles.receiptCard}
-        onPress={() => router.push(`/payment-receipt/${receipt.id}`)}
+        onPress={() => router.push(`/receipts/${receipt.id}`)}
       >
         <View style={styles.headerRow}>
           <View style={styles.jobInfo}>
