@@ -124,9 +124,9 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'Campus Jobs <onboarding@resend.dev>',
+          from: 'Dormate <team@verify.dormate.org>',
           to: email,
-          subject: 'Your Campus Jobs Verification Code',
+          subject: 'Your Dormate Verification Code',
           html: `
             <!DOCTYPE html>
             <html>
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
               <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
                 <div style="background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                   <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="color: #2A5EEA; margin: 0; font-size: 28px;">🎓 Campus Jobs</h1>
+                    <h1 style="color: #2A5EEA; margin: 0; font-size: 28px;">🎓 Dormate</h1>
                   </div>
                   
                   <h2 style="color: #0F172A; margin: 0 0 16px 0; font-size: 24px;">Welcome to Campus Jobs!</h2>

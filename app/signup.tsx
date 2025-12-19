@@ -62,7 +62,7 @@ export default function Signup() {
 
       showAlert(
         'Verification Code Sent',
-        'Please check your email for the 6-digit verification code. For testing, you can use 000000.'
+        'Please check your email for the 6-digit verification code.'
       );
 
       setStep('verify');
@@ -105,10 +105,6 @@ export default function Signup() {
       
       if (data.college) {
         setCollegeName(data.college.name);
-      }
-
-      if (data.testMode) {
-        showAlert('Test Mode', 'Using test verification code 000000');
       }
 
       setStep('terms');
