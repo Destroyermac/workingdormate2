@@ -1,5 +1,5 @@
 
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, ActivityIndicator, Switch } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { getCampusFromEmail } from "@/constants/campus";
@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import * as WebBrowser from 'expo-web-browser';
 import { supabaseApi } from "@/services/supabaseApi";
 import Toast from 'react-native-toast-message';
+import { notificationService } from "@/services/notificationService";
 
 export default function Settings() {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function Settings() {
   const [settingUpPayouts, setSettingUpPayouts] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   useEffect(() => {
     const loadCampus = async () => {
@@ -34,7 +37,20 @@ export default function Settings() {
     };
     loadCampus();
     loadBlockedUsers();
+    loadNotificationPref();
   }, [user]);
+
+  const loadNotificationPref = async () => {
+    try {
+      setLoadingNotifications(true);
+      const enabled = await notificationService.hasEnabledNotifications();
+      setNotificationsEnabled(enabled);
+    } catch (error) {
+      console.error('❌ Error loading notification preference:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
 
   const loadBlockedUsers = async () => {
     try {
@@ -232,6 +248,54 @@ export default function Settings() {
     router.push('/legal/contact-support');
   };
 
+  const explainAndRequestPermission = async () => {
+    return new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'Enable Notifications',
+        'We use notifications to alert you about new jobs at your college, job acceptance, comments, and payments. Do you want to allow notifications?',
+        [
+          { text: 'Not now', style: 'cancel', onPress: () => resolve(false) },
+          {
+            text: 'Allow',
+            onPress: async () => {
+              const token = await notificationService.registerForPushNotifications();
+              resolve(!!token);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    });
+  };
+
+  const handleToggleNotifications = async (value: boolean) => {
+    if (!isAuthenticated) {
+      Toast.show({ type: 'info', text1: 'Please sign in to manage notifications' });
+      return;
+    }
+    try {
+      setLoadingNotifications(true);
+      if (value) {
+        const granted = await explainAndRequestPermission();
+        if (!granted) {
+          setNotificationsEnabled(false);
+          return;
+        }
+        setNotificationsEnabled(true);
+        Toast.show({ type: 'success', text1: 'Notifications enabled' });
+      } else {
+        await notificationService.removeAllTokensForUser();
+        setNotificationsEnabled(false);
+        Toast.show({ type: 'success', text1: 'Notifications disabled' });
+      }
+    } catch (error: any) {
+      console.error('❌ Error updating notifications:', error);
+      Toast.show({ type: 'error', text1: 'Failed to update notifications' });
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <View style={styles.container}>
@@ -345,6 +409,32 @@ export default function Settings() {
                   </View>
                 </View>
               ))
+            )}
+          </View>
+        </View>
+
+        {/* Notifications */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+          <View style={styles.card}>
+            <View style={styles.notificationRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuItemText}>Enable push notifications</Text>
+                <Text style={styles.notificationSubtext}>
+                  New college jobs, job acceptance, comments, and payment updates.
+                </Text>
+              </View>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={handleToggleNotifications}
+                disabled={loadingNotifications}
+              />
+            </View>
+            {loadingNotifications && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#2A5EEA" />
+                <Text style={styles.loadingText}>Updating...</Text>
+              </View>
             )}
           </View>
         </View>
@@ -644,5 +734,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#475569",
+  },
+  notificationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  notificationSubtext: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 4,
+    lineHeight: 16,
   },
 });

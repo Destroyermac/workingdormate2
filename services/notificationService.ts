@@ -109,6 +109,26 @@ export class NotificationService {
     }
   }
 
+  async hasEnabledNotifications(): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data, error } = await supabase
+        .from('push_tokens')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1);
+      if (error) {
+        console.error('Error checking notification preference:', error);
+        return false;
+      }
+      return (data?.length || 0) > 0;
+    } catch (err) {
+      console.error('Error in hasEnabledNotifications:', err);
+      return false;
+    }
+  }
+
   async removePushToken(token: string): Promise<void> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -125,6 +145,22 @@ export class NotificationService {
       }
     } catch (error) {
       console.error('Error in removePushToken:', error);
+    }
+  }
+
+  async removeAllTokensForUser(): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase
+        .from('push_tokens')
+        .delete()
+        .eq('user_id', user.id);
+      if (error) {
+        console.error('Error removing all push tokens:', error);
+      }
+    } catch (error) {
+      console.error('Error in removeAllTokensForUser:', error);
     }
   }
 

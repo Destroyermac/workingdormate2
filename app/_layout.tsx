@@ -33,21 +33,29 @@ function LoadingScreen() {
 // Inner layout that has access to auth context
 function RootLayoutInner() {
   const { isLoading, isAuthenticated } = useAuth();
+  const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
   // Register for push notifications when authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      console.log('📱 Registering for push notifications...');
-      notificationService.registerForPushNotifications()
-        .then((token) => {
-          if (token) {
-            console.log('✅ Push notification token registered:', token.substring(0, 20) + '...');
-          } else {
-            console.log('⚠️ Push notifications not available');
+      notificationService.hasEnabledNotifications()
+        .then((enabled) => {
+          setNotificationsEnabled(enabled);
+          if (enabled) {
+            console.log('📱 Registering for push notifications...');
+            return notificationService.registerForPushNotifications()
+              .then((token) => {
+                if (token) {
+                  console.log('✅ Push notification token registered:', token.substring(0, 20) + '...');
+                } else {
+                  console.log('⚠️ Push notifications not available');
+                }
+              });
           }
+          return null;
         })
         .catch((error) => {
-          console.error('❌ Error registering for push notifications:', error);
+          console.error('❌ Error checking notification preference:', error);
         });
 
       // Listen for notifications
