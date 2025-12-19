@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { View, Text, ActivityIndicator, Platform, Alert } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { notificationService } from "@/services/notificationService";
 import Toast from 'react-native-toast-message';
 import { supabase } from "@/app/integrations/supabase/client";
@@ -34,7 +34,7 @@ function LoadingScreen() {
 // Inner layout that has access to auth context
 function RootLayoutInner() {
   const { isLoading, isAuthenticated } = useAuth();
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   // Register for push notifications when authenticated
   useEffect(() => {
