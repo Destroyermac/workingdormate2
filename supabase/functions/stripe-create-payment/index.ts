@@ -80,6 +80,31 @@ Deno.serve(async (req) => {
 
     console.log('👤 Payer user ID:', user.id);
 
+    // Fail fast if payer is banned
+    try {
+      const { data: bannedPayer, error: bannedPayerError } = await supabase
+        .from('banned_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      if (bannedPayerError) {
+        // If the table exists but the query fails, treat as server error
+        if (!bannedPayerError.message?.includes('relation "banned_users" does not exist')) {
+          console.error('❌ Error checking payer ban status:', bannedPayerError);
+          return jsonResponse({ error: 'Unable to verify account status' }, 500);
+        } else {
+          console.warn('⚠️ banned_users table missing, skipping ban check for payer');
+        }
+      } else if (bannedPayer && bannedPayer.length > 0) {
+        console.error('❌ Payer is banned');
+        return jsonResponse({ error: 'Your account is banned from making payments' }, 403);
+      }
+    } catch (banError) {
+      console.error('❌ Unexpected error during ban check:', banError);
+      return jsonResponse({ error: 'Unable to verify account status' }, 500);
+    }
+
     // Fetch job details
     const { data: job, error: jobError } = await supabase
       .from('jobs')
@@ -144,6 +169,30 @@ Deno.serve(async (req) => {
     if (!payeeProfile.stripe_account_id) {
       console.error('❌ Worker has no Stripe account');
       return jsonResponse({ error: 'Worker has not set up their Stripe account' }, 400);
+    }
+
+    // Fail fast if worker is banned
+    try {
+      const { data: bannedWorker, error: bannedWorkerError } = await supabase
+        .from('banned_users')
+        .select('id')
+        .eq('user_id', payeeProfile.id)
+        .limit(1);
+
+      if (bannedWorkerError) {
+        if (!bannedWorkerError.message?.includes('relation "banned_users" does not exist')) {
+          console.error('❌ Error checking worker ban status:', bannedWorkerError);
+          return jsonResponse({ error: 'Unable to verify worker account status' }, 500);
+        } else {
+          console.warn('⚠️ banned_users table missing, skipping ban check for worker');
+        }
+      } else if (bannedWorker && bannedWorker.length > 0) {
+        console.error('❌ Worker is banned');
+        return jsonResponse({ error: 'Worker is banned from receiving payments' }, 403);
+      }
+    } catch (banWorkerError) {
+      console.error('❌ Unexpected error during worker ban check:', banWorkerError);
+      return jsonResponse({ error: 'Unable to verify worker account status' }, 500);
     }
 
     // Calculate amounts
@@ -212,22 +261,29 @@ Deno.serve(async (req) => {
     // Create payment record in database
     try {
       console.log('💾 Creating payment record...');
+
+      const paymentRecord = {
+        job_id: jobId,
+        user_id: user.id,
+        payer_user_id: user.id,
+        payee_user_id: payeeProfile.id,
+        amount_total: jobPriceCents,
+        stripe_fee: 0,
+        platform_fee: platformFeeCents,
+        timestamp: new Date().toISOString(),
+        status: 'processing',
+        job_price_cents: jobPriceCents,
+        stripe_fee_cents: 0, // Will be updated by webhook
+        platform_fee_cents: platformFeeCents,
+        net_amount_cents: netAmountCents,
+        total_paid_cents: jobPriceCents,
+        currency: (job.price_currency || 'USD').toUpperCase(),
+        stripe_payment_intent_id: paymentIntent.id,
+      };
       
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
-        .insert({
-          job_id: jobId,
-          payer_user_id: user.id,
-          payee_user_id: payeeProfile.id,
-          job_price_cents: jobPriceCents,
-          stripe_fee_cents: 0, // Will be updated by webhook
-          platform_fee_cents: platformFeeCents,
-          net_amount_cents: netAmountCents,
-          total_paid_cents: jobPriceCents,
-          currency: (job.price_currency || 'USD').toUpperCase(),
-          stripe_payment_intent_id: paymentIntent.id,
-          status: 'pending',
-        })
+        .insert(paymentRecord)
         .select()
         .single();
 
@@ -250,6 +306,15 @@ Deno.serve(async (req) => {
       amount: jobPriceCents,
       platformFee: platformFeeCents,
       workerAmount: netAmountCents,
+      metadata: {
+        jobId,
+        payerUserId: user.id,
+        payeeUserId: payeeProfile.id,
+        currency: (job.price_currency || 'USD').toUpperCase(),
+        stripeFee: 0,
+        platformFee: platformFeeCents,
+        amountTotal: jobPriceCents,
+      },
     }, 200);
 
   } catch (error: any) {

@@ -224,6 +224,10 @@ export default function Settings() {
     router.push('/legal/terms-of-service');
   };
 
+  const openReceipts = () => {
+    router.push('/receipts');
+  };
+
   const openContactSupport = () => {
     router.push('/legal/contact-support');
   };
@@ -342,6 +346,17 @@ export default function Settings() {
                 </View>
               ))
             )}
+          </View>
+        </View>
+
+        {/* Payments & Receipts */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payments & Receipts</Text>
+          <View style={styles.card}>
+            <TouchableOpacity style={styles.menuItem} onPress={openReceipts}>
+              <Text style={styles.menuItemText}>Receipts</Text>
+              <Text style={styles.menuItemArrow}>›</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

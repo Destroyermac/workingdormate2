@@ -260,6 +260,77 @@ export interface Database {
           updated_at?: string
         }
       }
+      payments: {
+        Row: {
+          id: string
+          user_id: string
+          job_id: string
+          amount_total: number
+          stripe_fee: number | null
+          platform_fee: number | null
+          timestamp: string
+          status: string
+          payer_user_id: string | null
+          payee_user_id: string | null
+          job_price_cents: number | null
+          stripe_fee_cents: number | null
+          platform_fee_cents: number | null
+          net_amount_cents: number | null
+          total_paid_cents: number | null
+          currency: string | null
+          stripe_payment_intent_id: string | null
+          stripe_transfer_id: string | null
+          stripe_charge_id: string | null
+          created_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          job_id: string
+          amount_total: number
+          stripe_fee?: number | null
+          platform_fee?: number | null
+          timestamp?: string
+          status?: string
+          payer_user_id?: string | null
+          payee_user_id?: string | null
+          job_price_cents?: number | null
+          stripe_fee_cents?: number | null
+          platform_fee_cents?: number | null
+          net_amount_cents?: number | null
+          total_paid_cents?: number | null
+          currency?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_transfer_id?: string | null
+          stripe_charge_id?: string | null
+          created_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          job_id?: string
+          amount_total?: number
+          stripe_fee?: number | null
+          platform_fee?: number | null
+          timestamp?: string
+          status?: string
+          payer_user_id?: string | null
+          payee_user_id?: string | null
+          job_price_cents?: number | null
+          stripe_fee_cents?: number | null
+          platform_fee_cents?: number | null
+          net_amount_cents?: number | null
+          total_paid_cents?: number | null
+          currency?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_transfer_id?: string | null
+          stripe_charge_id?: string | null
+          created_at?: string
+          completed_at?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
