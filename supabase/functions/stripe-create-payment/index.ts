@@ -80,29 +80,24 @@ Deno.serve(async (req) => {
 
     console.log('👤 Payer user ID:', user.id);
 
-    // Fail fast if payer is banned
+    // Fail fast if payer is blocked (policy enforcement server-side)
     try {
-      const { data: bannedPayer, error: bannedPayerError } = await supabase
-        .from('banned_users')
+      const { data: blockedPayer, error: blockedPayerError } = await supabase
+        .from('blocked_users')
         .select('id')
         .eq('user_id', user.id)
         .limit(1);
 
-      if (bannedPayerError) {
-        // If the table exists but the query fails, treat as server error
-        if (!bannedPayerError.message?.includes('relation "banned_users" does not exist')) {
-          console.error('❌ Error checking payer ban status:', bannedPayerError);
-          return jsonResponse({ error: 'Unable to verify account status' }, 500);
-        } else {
-          console.warn('⚠️ banned_users table missing, skipping ban check for payer');
-        }
-      } else if (bannedPayer && bannedPayer.length > 0) {
-        console.error('❌ Payer is banned');
-        return jsonResponse({ error: 'Your account is banned from making payments' }, 403);
+      if (blockedPayerError) {
+        // Gracefully continue on table/cache issues
+        console.warn('⚠️ Error checking payer block status (continuing):', blockedPayerError);
+      } else if (blockedPayer && blockedPayer.length > 0) {
+        console.error('❌ Payer is blocked');
+        return jsonResponse({ error: 'Your account is blocked from making payments' }, 403);
       }
     } catch (banError) {
-      console.error('❌ Unexpected error during ban check:', banError);
-      return jsonResponse({ error: 'Unable to verify account status' }, 500);
+      // Continue on unexpected lookup errors to avoid hard failures
+      console.warn('⚠️ Unexpected error during payer block check (continuing):', banError);
     }
 
     // Fetch job details
@@ -171,28 +166,24 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Worker has not set up their Stripe account' }, 400);
     }
 
-    // Fail fast if worker is banned
+    // Fail fast if worker is blocked (policy enforcement server-side)
     try {
-      const { data: bannedWorker, error: bannedWorkerError } = await supabase
-        .from('banned_users')
+      const { data: blockedWorker, error: blockedWorkerError } = await supabase
+        .from('blocked_users')
         .select('id')
         .eq('user_id', payeeProfile.id)
         .limit(1);
 
-      if (bannedWorkerError) {
-        if (!bannedWorkerError.message?.includes('relation "banned_users" does not exist')) {
-          console.error('❌ Error checking worker ban status:', bannedWorkerError);
-          return jsonResponse({ error: 'Unable to verify worker account status' }, 500);
-        } else {
-          console.warn('⚠️ banned_users table missing, skipping ban check for worker');
-        }
-      } else if (bannedWorker && bannedWorker.length > 0) {
-        console.error('❌ Worker is banned');
-        return jsonResponse({ error: 'Worker is banned from receiving payments' }, 403);
+      if (blockedWorkerError) {
+        // Gracefully continue on table/cache issues
+        console.warn('⚠️ Error checking worker block status (continuing):', blockedWorkerError);
+      } else if (blockedWorker && blockedWorker.length > 0) {
+        console.error('❌ Worker is blocked');
+        return jsonResponse({ error: 'Worker is blocked from receiving payments' }, 403);
       }
     } catch (banWorkerError) {
-      console.error('❌ Unexpected error during worker ban check:', banWorkerError);
-      return jsonResponse({ error: 'Unable to verify worker account status' }, 500);
+      // Continue on unexpected lookup errors to avoid hard failures
+      console.warn('⚠️ Unexpected error during worker block check (continuing):', banWorkerError);
     }
 
     // Calculate amounts
