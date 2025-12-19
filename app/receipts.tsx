@@ -80,8 +80,14 @@ export default function Receipts() {
   const getStripeFee = (receipt: Receipt) =>
     receipt.stripe_fee_cents ?? receipt.stripe_fee ?? 0;
 
+  const getStripeFeePercent = (receipt: Receipt) =>
+    receipt.stripe_fee_percent ?? null;
+
   const getPlatformFee = (receipt: Receipt) =>
     receipt.platform_fee_cents ?? receipt.platform_fee ?? 0;
+
+  const getPlatformFeePercent = (receipt: Receipt) =>
+    receipt.platform_fee_percent ?? null;
 
   const getTotal = (receipt: Receipt, role: ReceiptRole) => {
     if (role === "sent") {
@@ -100,7 +106,9 @@ export default function Receipts() {
   const renderReceipt = (receipt: Receipt & { role: ReceiptRole }) => {
     const amount = getTotal(receipt, receipt.role);
     const stripeFee = getStripeFee(receipt);
+    const stripeFeePct = getStripeFeePercent(receipt);
     const platformFee = getPlatformFee(receipt);
+    const platformFeePct = getPlatformFeePercent(receipt);
     const dateValue = formatDate(receipt.timestamp || receipt.created_at || "");
     const isSent = receipt.role === "sent";
 
@@ -123,11 +131,21 @@ export default function Receipts() {
 
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Stripe fee</Text>
-          <Text style={styles.metaValue}>{formatAmount(stripeFee, receipt.currency || "USD")}</Text>
+          <Text style={styles.metaValue}>
+            {formatAmount(stripeFee, receipt.currency || "USD")}
+            {stripeFeePct !== null && stripeFeePct !== undefined
+              ? ` (${stripeFeePct.toFixed(2)}%)`
+              : ""}
+          </Text>
         </View>
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Platform fee</Text>
-          <Text style={styles.metaValue}>{formatAmount(platformFee, receipt.currency || "USD")}</Text>
+          <Text style={styles.metaValue}>
+            {formatAmount(platformFee, receipt.currency || "USD")}
+            {platformFeePct !== null && platformFeePct !== undefined
+              ? ` (${platformFeePct.toFixed(2)}%)`
+              : ""}
+          </Text>
         </View>
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Timestamp</Text>

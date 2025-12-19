@@ -666,14 +666,28 @@ export class SupabaseApiService {
     console.log('💳 Fetching payments for user:', user.id);
 
     try {
-      // Get payments where user is payer
+      // Get payments where user is payer (payments_v2)
       const { data: sentPayments, error: sentError } = await supabase
-        .from('payments')
+        .from('payments_v2')
         .select(`
-          *,
-          job:jobs(id, title),
-          payer:users!payer_user_id(id, username, email),
-          payee:users!payee_user_id(id, username, email)
+          id,
+          job_id,
+          user_id,
+          payer_user_id,
+          payee_user_id,
+          amount_total,
+          stripe_fee,
+          platform_fee,
+          stripe_fee_percent,
+          platform_fee_percent,
+          net_amount_cents,
+          total_paid_cents,
+          currency,
+          status,
+          timestamp,
+          created_at,
+          stripe_payment_intent_id,
+          job:jobs(id, title)
         `)
         .eq('payer_user_id', user.id)
         .order('created_at', { ascending: false });
@@ -689,14 +703,28 @@ export class SupabaseApiService {
         }
       }
 
-      // Get payments where user is payee
+      // Get payments where user is payee (payments_v2)
       const { data: receivedPayments, error: receivedError } = await supabase
-        .from('payments')
+        .from('payments_v2')
         .select(`
-          *,
-          job:jobs(id, title),
-          payer:users!payer_user_id(id, username, email),
-          payee:users!payee_user_id(id, username, email)
+          id,
+          job_id,
+          user_id,
+          payer_user_id,
+          payee_user_id,
+          amount_total,
+          stripe_fee,
+          platform_fee,
+          stripe_fee_percent,
+          platform_fee_percent,
+          net_amount_cents,
+          total_paid_cents,
+          currency,
+          status,
+          timestamp,
+          created_at,
+          stripe_payment_intent_id,
+          job:jobs(id, title)
         `)
         .eq('payee_user_id', user.id)
         .order('created_at', { ascending: false });
@@ -711,7 +739,7 @@ export class SupabaseApiService {
         }
       }
 
-      console.log('✅ Payments fetched:', {
+      console.log('✅ Payments fetched (v2):', {
         sent: sentPayments?.length || 0,
         received: receivedPayments?.length || 0,
       });
@@ -742,9 +770,25 @@ export class SupabaseApiService {
 
     try {
       const { data: payment, error } = await supabase
-        .from('payments')
+        .from('payments_v2')
         .select(`
-          *,
+          id,
+          job_id,
+          user_id,
+          payer_user_id,
+          payee_user_id,
+          amount_total,
+          stripe_fee,
+          platform_fee,
+          stripe_fee_percent,
+          platform_fee_percent,
+          net_amount_cents,
+          total_paid_cents,
+          currency,
+          status,
+          timestamp,
+          created_at,
+          stripe_payment_intent_id,
           job:jobs(id, title, description),
           payer:users!payer_user_id(id, username, email),
           payee:users!payee_user_id(id, username, email)

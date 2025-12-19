@@ -178,13 +178,23 @@ export default function ReceiptDetail() {
 
           <View style={styles.section}>
             <Text style={styles.label}>Platform Fee</Text>
-            <Text style={styles.value}>-{formatAmount(payment.platform_fee_cents, payment.currency)}</Text>
+            <Text style={styles.value}>
+              -{formatAmount(payment.platform_fee_cents, payment.currency)}
+              {payment.platform_fee_percent !== undefined && payment.platform_fee_percent !== null
+                ? ` (${payment.platform_fee_percent.toFixed(2)}%)`
+                : ""}
+            </Text>
           </View>
 
           {payment.stripe_fee_cents > 0 && (
             <View style={styles.section}>
               <Text style={styles.label}>Stripe Fee</Text>
-              <Text style={styles.value}>-{formatAmount(payment.stripe_fee_cents, payment.currency)}</Text>
+              <Text style={styles.value}>
+                -{formatAmount(payment.stripe_fee_cents, payment.currency)}
+                {payment.stripe_fee_percent !== undefined && payment.stripe_fee_percent !== null
+                  ? ` (${payment.stripe_fee_percent.toFixed(2)}%)`
+                  : ""}
+              </Text>
             </View>
           )}
 

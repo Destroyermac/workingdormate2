@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
 
       if (blockedPayerError) {
         // Gracefully continue on table/cache issues
-        console.warn('⚠️ Error checking payer block status (continuing):', blockedPayerError);
+      console.warn('⚠️ Error checking payer block status (continuing):', blockedPayerError);
       } else if (blockedPayer && blockedPayer.length > 0) {
         console.error('❌ Payer is blocked');
         return jsonResponse({ error: 'Your account is blocked from making payments' }, 403);
