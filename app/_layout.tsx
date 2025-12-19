@@ -1,11 +1,12 @@
 
 import { Stack } from "expo-router";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { View, Text, ActivityIndicator, Platform } from "react-native";
+import { View, Text, ActivityIndicator, Platform, Alert } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { notificationService } from "@/services/notificationService";
 import Toast from 'react-native-toast-message';
+import { supabase } from "@/app/integrations/supabase/client";
 
 // Conditionally import StripeProvider only on native platforms (not web, not Expo Go)
 // This prevents "OnrampSdk could not be found" errors
@@ -38,25 +39,44 @@ function RootLayoutInner() {
   // Register for push notifications when authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      notificationService.hasEnabledNotifications()
-        .then((enabled) => {
-          setNotificationsEnabled(enabled);
-          if (enabled) {
-            console.log('📱 Registering for push notifications...');
-            return notificationService.registerForPushNotifications()
-              .then((token) => {
-                if (token) {
-                  console.log('✅ Push notification token registered:', token.substring(0, 20) + '...');
-                } else {
-                  console.log('⚠️ Push notifications not available');
-                }
-              });
+      const checkBanAndNotifications = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('ban-check');
+          if (error || data?.error) {
+            console.warn('User is banned or ban-check failed', error || data?.error);
+            await supabase.auth.signOut();
+            Alert.alert(
+              'Account Restricted',
+              'Your account has been banned. Please contact support if you believe this is a mistake.'
+            );
+            return;
           }
-          return null;
-        })
-        .catch((error) => {
-          console.error('❌ Error checking notification preference:', error);
-        });
+
+          notificationService.hasEnabledNotifications()
+            .then((enabled) => {
+              setNotificationsEnabled(enabled);
+              if (enabled) {
+                console.log('📱 Registering for push notifications...');
+                return notificationService.registerForPushNotifications()
+                  .then((token) => {
+                    if (token) {
+                      console.log('✅ Push notification token registered:', token.substring(0, 20) + '...');
+                    } else {
+                      console.log('⚠️ Push notifications not available');
+                    }
+                  });
+              }
+              return null;
+            })
+            .catch((error) => {
+              console.error('❌ Error checking notification preference:', error);
+            });
+        } catch (err) {
+          console.error('❌ Error in ban/notification check:', err);
+        }
+      };
+
+      checkBanAndNotifications();
 
       // Listen for notifications
       const notificationListener = notificationService.addNotificationReceivedListener((notification) => {
