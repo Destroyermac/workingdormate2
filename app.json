@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Campus Connect",
@@ -38,7 +37,15 @@
       "favicon": "./assets/images/final_quest_240x240.png",
       "bundler": "metro"
     },
-    "plugins": [],
+    "plugins": [
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": null,
+          "enableGooglePay": false
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     },
