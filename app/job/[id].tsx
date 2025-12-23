@@ -524,6 +524,20 @@ export default function JobDetail() {
 
               console.log('✅ Payment successful');
 
+              // User-facing breakdown based on agreed fees (2.9% + $0.30 + 10% platform)
+              const totalCents = Math.round(job.price_amount * 100);
+              const platformFeeCents = Math.round(totalCents * 0.10);
+              const stripeFeeCents = Math.round(totalCents * 0.029 + 30);
+              const netCents = totalCents - platformFeeCents - stripeFeeCents;
+
+              Alert.alert(
+                'Payment Successful',
+                `Total: $${(totalCents / 100).toFixed(2)} ${job.price_currency}\n` +
+                `Stripe fee: $${(stripeFeeCents / 100).toFixed(2)} (2.9% + $0.30)\n` +
+                `Platform fee: $${(platformFeeCents / 100).toFixed(2)} (10%)\n` +
+                `Net to worker: $${(netCents / 100).toFixed(2)} ${job.price_currency}`
+              );
+
               // Step 4: Record payment receipt AFTER successful payment
               try {
                 await supabaseApi.recordPaymentReceipt(job.id, paymentResult.paymentIntentId);
