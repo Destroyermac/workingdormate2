@@ -50,9 +50,19 @@ export function ReportModal({
       return;
     }
 
+    const targetId = reportedJobId || reportedUserId;
+    if (!targetId) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing target',
+        text2: 'Unable to determine what you are reporting.',
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
-      console.log('📝 Submitting report...', { reason, reportType });
+      console.log('📝 Submitting report...', { reason, reportType, targetId });
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -60,13 +70,12 @@ export function ReportModal({
         throw new Error('Not authenticated');
       }
 
-      // Submit report to Supabase
+      // Submit report to Supabase (aligns with reports schema: user_id, target_id, report_type, description)
       const { error } = await supabase.from('reports').insert({
-        reporter_user_id: user.id,
-        reported_user_id: reportedUserId || null,
-        reported_job_id: reportedJobId || null,
-        reason,
-        details: details.trim() || null,
+        user_id: user.id,
+        target_id: targetId,
+        report_type: reason,
+        description: (details || reason).trim(),
       });
 
       if (error) {
