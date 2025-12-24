@@ -147,6 +147,7 @@ export class SupabaseApiService {
     }
   }
 
+  // Legacy compatibility layer: record receipt in payments_v2 (source of truth)
   async recordPaymentReceipt(jobId: string, paymentIntentId: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -154,18 +155,74 @@ export class SupabaseApiService {
     console.log('📝 Recording payment receipt for job:', jobId);
 
     try {
-      // Update payment status to completed
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-        })
-        .eq('stripe_payment_intent_id', paymentIntentId);
+      // Fetch job info to derive amounts and parties
+      const { data: job, error: jobError } = await supabase
+        .from('jobs')
+        .select('id, title, price_amount, price_currency, posted_by_user_id, assigned_to_user_id')
+        .eq('id', jobId)
+        .single();
 
-      if (updateError) {
-        console.error('❌ Failed to update payment status:', updateError);
-        throw updateError;
+      if (jobError || !job) {
+        console.error('❌ Failed to load job for receipt:', jobError);
+        throw jobError || new Error('Job not found');
+      }
+
+      const totalCents = Math.round(Number(job.price_amount || 0) * 100);
+      const platformFeePercent = 10.0;
+      const stripeFeePercent = 2.9;
+      const platformFeeCents = Math.round(totalCents * (platformFeePercent / 100));
+      const stripeFeeCents = Math.round(totalCents * 0.029 + 30); // 2.9% + $0.30
+      const netCents = totalCents - platformFeeCents - stripeFeeCents;
+      const currency = (job.price_currency || 'USD').toUpperCase();
+
+      const payload = {
+        payer_user_id: job.posted_by_user_id || user.id,
+        payee_user_id: job.assigned_to_user_id || null,
+        job_id: job.id,
+        job_title: job.title || null,
+        job_price_cents: totalCents,
+        stripe_fee_cents: stripeFeeCents,
+        platform_fee_cents: platformFeeCents,
+        stripe_fee_percent: stripeFeePercent,
+        platform_fee_percent: platformFeePercent,
+        total_paid_cents: totalCents,
+        net_amount_cents: netCents,
+        currency,
+        stripe_payment_intent_id: paymentIntentId,
+        status: 'completed',
+      };
+
+      // Try to update existing payment; if none, insert new
+      const { data: existing, error: selectError } = await supabase
+        .from('payments_v2')
+        .select('id')
+        .eq('stripe_payment_intent_id', paymentIntentId)
+        .limit(1)
+        .single();
+
+      if (selectError && selectError.code !== 'PGRST116') {
+        console.warn('⚠️ Could not check existing payment_v2 row:', selectError);
+      }
+
+      if (existing?.id) {
+        const { error: updateError } = await supabase
+          .from('payments_v2')
+          .update(payload)
+          .eq('id', existing.id);
+
+        if (updateError) {
+          console.error('❌ Failed to update payment_v2 record:', updateError);
+          throw updateError;
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from('payments_v2')
+          .insert(payload);
+
+        if (insertError) {
+          console.error('❌ Failed to insert payment_v2 record:', insertError);
+          throw insertError;
+        }
       }
 
       console.log('✅ Payment receipt recorded successfully');
