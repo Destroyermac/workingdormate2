@@ -1,5 +1,5 @@
 
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, ActivityIndicator, Switch } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, ActivityIndicator, Switch, Modal, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { getCampusFromEmail } from "@/constants/campus";
@@ -24,6 +24,10 @@ export default function Settings() {
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     const loadCampus = async () => {
@@ -175,46 +179,93 @@ export default function Settings() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('🗑️ Deleting account...');
-              const { error: fnError } = await supabase.functions.invoke('delete-user-data', {
-                body: { userId: user?.id },
-              });
+    setDeleteError('');
+    setDeleteConfirmation('');
+    setShowDeleteModal(true);
+  };
 
-              if (fnError) {
-                console.error('❌ Error deleting user data:', fnError);
-                Alert.alert('Error', 'Failed to delete account. Please contact support.');
-                return;
-              }
+  const invokeDeleteCascade = async (userId: string, jwt?: string) => {
+    const attempt = async () => {
+      const call = supabase.functions.invoke('delete-user-cascade', {
+        body: { user_id: userId },
+        headers: jwt ? { Authorization: `Bearer ${jwt}` } : undefined,
+      });
 
-              await supabase.auth.signOut();
+      const timed = Promise.race([
+        call,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 20000)),
+      ]) as Promise<{ data: any; error: any }>;
 
-              Alert.alert('Account Deleted', 'Your account has been permanently deleted.', [
-                {
-                  text: 'OK',
-                  onPress: () => router.replace('/login'),
-                },
-              ]);
-            } catch (error: any) {
-              console.error('❌ Error deleting account:', error);
-              Alert.alert('Error', error.message || 'Failed to delete account. Please try again.');
-            }
-          },
-        },
-      ]
-    );
+      return timed;
+    };
+
+    try {
+      return await attempt();
+    } catch (err) {
+      console.warn('⚠️ Delete attempt failed, retrying...', err);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return attempt();
+    }
+  };
+
+  const performDeleteAccount = async () => {
+    if (!user?.id) {
+      setDeleteError('You must be signed in to delete your account.');
+      return;
+    }
+    if (deleteConfirmation.trim().toUpperCase() !== 'DELETE') {
+      setDeleteError('Please type DELETE to confirm.');
+      return;
+    }
+
+    try {
+      setDeletingAccount(true);
+      setDeleteError('');
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData?.session?.access_token) {
+        throw new Error('Your session expired — please sign in again and retry deletion.');
+      }
+
+      const jwt = sessionData.session.access_token;
+      const { error } = await invokeDeleteCascade(user.id, jwt);
+
+      if (error) {
+        const message = error.message || error.toString();
+        if (error.status === 401 || error.status === 403) {
+          throw new Error('Your session expired — please sign in again and retry deletion.');
+        }
+        throw new Error(`Deletion failed: ${message}`);
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: 'Account deleted successfully',
+        text2: 'You will be redirected.',
+      });
+
+      try {
+        await notificationService.removeAllPushTokens();
+      } catch (pushErr) {
+        console.warn('⚠️ Failed to remove push tokens:', pushErr);
+      }
+
+      await supabase.auth.signOut();
+      setShowDeleteModal(false);
+      setDeleteConfirmation('');
+      router.replace('/login');
+    } catch (err: any) {
+      console.error('❌ Error deleting account:', err);
+      const message = err?.message || 'Deletion failed — please try again later.';
+      setDeleteError(message);
+      Toast.show({
+        type: 'error',
+        text1: 'Deletion failed',
+        text2: message,
+      });
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -473,8 +524,16 @@ export default function Settings() {
           <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
             <Text style={styles.signOutButtonText}>Sign Out</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
-            <Text style={styles.deleteButtonText}>Delete Account</Text>
+          <TouchableOpacity
+            style={[styles.deleteButton, deletingAccount && styles.buttonDisabled]}
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount}
+          >
+            {deletingAccount ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.deleteButtonText}>Delete Account</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -484,6 +543,65 @@ export default function Settings() {
           <Text style={styles.footerText}>© 2025 dormate. All rights reserved.</Text>
         </View>
       </ScrollView>
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!deletingAccount) setShowDeleteModal(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Confirm Account Deletion</Text>
+            <Text style={styles.modalText}>
+              This will permanently delete your account and all associated data. This action cannot be undone.
+            </Text>
+            <Text style={styles.modalText}>Type DELETE to confirm.</Text>
+            <TextInput
+              style={styles.confirmInput}
+              value={deleteConfirmation}
+              onChangeText={setDeleteConfirmation}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={!deletingAccount}
+              placeholder="DELETE"
+              placeholderTextColor="#94A3B8"
+            />
+            {deleteError ? <Text style={styles.errorTextInline}>{deleteError}</Text> : null}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.secondaryButton, styles.modalButton]}
+                onPress={() => {
+                  if (!deletingAccount) {
+                    setShowDeleteModal(false);
+                    setDeleteError('');
+                  }
+                }}
+                disabled={deletingAccount}
+              >
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.deleteButton,
+                  styles.modalButton,
+                  (deletingAccount || deleteConfirmation.trim().toUpperCase() !== 'DELETE') && styles.buttonDisabled,
+                ]}
+                onPress={performDeleteAccount}
+                disabled={deletingAccount || deleteConfirmation.trim().toUpperCase() !== 'DELETE'}
+              >
+                {deletingAccount ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={styles.deleteButtonText}>Confirm Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -672,6 +790,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
   },
+  errorTextInline: {
+    color: "#EF4444",
+    fontSize: 14,
+    marginBottom: 4,
+  },
   button: {
     backgroundColor: "#2A5EEA",
     paddingHorizontal: 24,
@@ -730,6 +853,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#475569",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 20,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 12,
+  },
+  modalText: {
+    fontSize: 14,
+    color: "#475569",
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  confirmInput: {
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: "#0F172A",
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 12,
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
   },
   notificationRow: {
     flexDirection: "row",
