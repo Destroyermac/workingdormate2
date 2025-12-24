@@ -70,7 +70,7 @@ export function ReportModal({
         throw new Error('Not authenticated');
       }
 
-      // Submit report to Supabase (aligns with reports schema: user_id, target_id, report_type, description)
+      // Submit report to Supabase (schema: user_id, target_id, report_type, description)
       const { error } = await supabase.from('reports').insert({
         user_id: user.id,
         target_id: targetId,
